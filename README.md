@@ -1,6 +1,6 @@
 # Comprehend
 
-A Go library for interacting with the AW Comprehend service.
+A Go library for interacting with the AWS Comprehend service.
 
 ## Install
 
