@@ -2,14 +2,8 @@ package comprehend
 
 import (
 	"github.com/aws/aws-sdk-go/service/comprehend"
-	"github.com/aws/aws-sdk-go/service/comprehend/comprehendiface"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/aws"
 )
-
-type ComprehendClient struct {
-	Client comprehendiface.ComprehendAPI
-}
 
 type Sentiment struct {
 	SentimentClass string
@@ -23,24 +17,27 @@ type SentinmentScore struct {
 	Neutral float64
 }
 
-func NewClient() ComprehendClient {
-	client := ComprehendClient{}
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+type Entity struct {
+	Text string
+	EntityType string
+	Score float64
+}
 
-	svc := comprehend.New(sess)
+type KeyPhrase struct {
+	Phrase string
+	Score float64
+}
 
-	client.Client = svc
-
-	return client
+type Lang struct {
+	Score float64
+	LangCode string
 }
 
 func (c* ComprehendClient) GetSentiment(text string) (Sentiment, error) {
 	var sentiment Sentiment
 
 	resp, err := c.Client.DetectSentiment(&comprehend.DetectSentimentInput{
-		LanguageCode: aws.String("en"),
+		LanguageCode: aws.String(c.Language),
 		Text:         aws.String(text),
 	})
 
@@ -57,17 +54,11 @@ func (c* ComprehendClient) GetSentiment(text string) (Sentiment, error) {
 	return sentiment, nil
 }
 
-type Entity struct {
-	Text string
-	EntityType string
-	Score float64
-}
-
 func (c* ComprehendClient) GetEntities(text string) ([]Entity, error) {
 	var entities []Entity
 
 	resp, err := c.Client.DetectEntities(&comprehend.DetectEntitiesInput{
-		LanguageCode: aws.String("en"),
+		LanguageCode: aws.String(c.Language),
 		Text:         aws.String(text),
 	})
 	if err != nil {
@@ -85,17 +76,12 @@ func (c* ComprehendClient) GetEntities(text string) ([]Entity, error) {
 	return entities, nil
 }
 
-type KeyPhrase struct {
-	Phrase string
-	Score float64
-}
-
 func (c* ComprehendClient) GetKeyPhrases(text string) ([]KeyPhrase, error) {
 	var keyPhrases []KeyPhrase
 
 
 	resp, err := c.Client.DetectKeyPhrases(&comprehend.DetectKeyPhrasesInput{
-		LanguageCode: aws.String("en"),
+		LanguageCode: aws.String(c.Language),
 		Text:         aws.String(text),
 	})
 
@@ -111,4 +97,24 @@ func (c* ComprehendClient) GetKeyPhrases(text string) ([]KeyPhrase, error) {
 	}
 
 	return keyPhrases, nil
+}
+
+func (c *ComprehendClient) GetDominantLanguage(text string) ([]Lang, error) {
+	var langs []Lang
+
+	resp, err := c.Client.DetectDominantLanguage(&comprehend.DetectDominantLanguageInput{
+		Text: aws.String(text),
+	})
+	if err != nil {
+		return langs, err
+	}
+
+	for _, lang := range resp.Languages {
+		langs = append(langs, Lang{
+			Score:    *lang.Score,
+			LangCode: *lang.LanguageCode,
+		})
+	}
+
+	return langs, nil
 }
